@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>时间戳转换</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #f0f0f0;
+    letter-spacing: 0.02em;
+  }
+
+  .back-link { display: inline-block; color: #7a7a9a; text-decoration: none; font-size: 12px; margin-bottom: 4px; transition: color 0.15s; }
+  .back-link:hover { color: #e0e0e0; }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #888;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    background: #16213e;
+    border: 1px solid #2a2a4a;
+    border-radius: 6px;
+    color: #e0e0e0;
+    font: inherit;
+    font-size: 0.875rem;
+    padding: 0.7rem 1rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input[type="text"]:focus { border-color: #4a6fa5; }
+  input[type="text"]::placeholder { color: #555; }
+
+  .now-btn {
+    background: #2a2a4a;
+    border: 1px solid #3a3a5a;
+    color: #ccc;
+    padding: 0 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .now-btn:hover { background: #3a3a5a; color: #fff; }
+
+  .output-wrap {
+    position: relative;
+  }
+
+  pre {
+    background: #16213e;
+    border: 1px solid #2a2a4a;
+    border-radius: 6px;
+    padding: 1rem 3rem 1rem 1rem;
+    min-height: 200px;
+    max-height: 500px;
+    overflow: auto;
+    font: inherit;
+    font-size: 0.875rem;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: #2a2a4a;
+    border: 1px solid #3a3a5a;
+    color: #ccc;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .copy-btn:hover { background: #3a3a5a; color: #fff; }
+  .copy-btn.copied { background: #2d5a27; border-color: #3a7a32; color: #8f8; }
+
+  .error {
+    background: #3a1a1a;
+    border: 1px solid #5a2a2a;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    color: #ff8888;
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+  }
+
+  .error:empty { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <a class="back-link" href="index.html">← 返回首页</a>
+  <h1>时间戳转换</h1>
+
+  <div class="panel">
+    <label>Input — 输入时间戳或日期时间</label>
+    <div class="input-row">
+      <input type="text" id="input" placeholder="1700000000 或 2024-01-01 12:00:00">
+      <button class="now-btn" id="nowBtn">当前时间</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <label>Output</label>
+    </div>
+    <div class="output-wrap">
+      <pre id="output"></pre>
+      <button class="copy-btn" id="copyBtn">Copy</button>
+    </div>
+  </div>
+
+  <div class="error" id="error"></div>
+</div>
+
+<script>
+  const input  = document.getElementById('input');
+  const output = document.getElementById('output');
+  const errorEl = document.getElementById('error');
+  const copyBtn = document.getElementById('copyBtn');
+  const nowBtn  = document.getElementById('nowBtn');
+
+  const TZ_OFFSET = 8; // UTC+8 Beijing
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function formatBJ(d) {
+    const y = d.getUTCFullYear();
+    const mo = pad(d.getUTCMonth() + 1);
+    const day = pad(d.getUTCDate());
+    const h = pad(d.getUTCHours());
+    const mi = pad(d.getUTCMinutes());
+    const s = pad(d.getUTCSeconds());
+    const ms = String(d.getUTCMilliseconds()).padStart(3, '0');
+    const week = ['日','一','二','三','四','五','六'][d.getUTCDay()];
+    return { y, mo, day, h, mi, s, ms, week };
+  }
+
+  function bjDateFromTimestamp(ms) {
+    // shift by UTC+8 then build UTC date from that
+    const d = new Date(ms + TZ_OFFSET * 3600000);
+    return d;
+  }
+
+  function tsToResult(raw) {
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0 || !/^\d+$/.test(raw)) return null;
+
+    let ms, unit;
+    if (raw.length <= 10) { ms = n * 1000; unit = '秒'; }
+    else { ms = n; unit = '毫秒'; }
+
+    const d = bjDateFromTimestamp(ms);
+    const f = formatBJ(d);
+
+    return [
+      '输入时间戳       ' + raw + ' (' + unit + ')',
+      '',
+      '北京时间          ' + f.y + '-' + f.mo + '-' + f.day + ' ' + f.h + ':' + f.mi + ':' + f.s,
+      '北京时间(毫秒)    ' + f.y + '-' + f.mo + '-' + f.day + ' ' + f.h + ':' + f.mi + ':' + f.s + '.' + f.ms,
+      '星期              ' + '周' + f.week,
+      '',
+      'UTC 时间          ' + new Date(ms).toISOString().replace('T',' ').slice(0,19),
+      'Unix 秒           ' + Math.floor(ms / 1000),
+      'Unix 毫秒         ' + ms,
+      '',
+      'ISO 8601 (北京)   ' + f.y + '-' + f.mo + '-' + f.day + 'T' + f.h + ':' + f.mi + ':' + f.s + '+08:00',
+    ].join('\n');
+  }
+
+  function datetimeToResult(raw) {
+    const s = raw.trim();
+    // try to parse as Beijing datetime
+    // replace common separators
+    let d;
+    // Try "YYYY-MM-DD HH:mm:ss.SSS" and variants
+    const clean = s
+      .replace(/[\/]/g, '-')      // normalize separators
+      .replace(/[Tt]/, ' ')       // ISO T → space
+      .replace(/Z$/i, '')         // drop trailing Z
+      .replace(/[+-]\d{2}:\d{2}$/, '') // drop timezone offset
+      .replace(/[+-]\d{4}$/, '')  // drop +0800
+      .trim();
+
+    // Parse as local-ish: treat the string as Beijing time
+    // We'll use Date.parse but handle the offset manually
+    const parts = clean.match(/^(\d{4})-(\d{2})-(\d{2})[\s.]?(\d{2})?:?(\d{2})?:?(\d{2})?\.?(\d{0,3})?/);
+    if (!parts) return null;
+
+    const [, Y, M, D, h, m, sec, ms] = parts;
+    const year = parseInt(Y), month = parseInt(M) - 1, day = parseInt(D);
+    const hour = parseInt(h || '0'), min = parseInt(m || '0'), secs = parseInt(sec || '0');
+    const millis = parseInt((ms || '0').padEnd(3, '0'));
+
+    // Create UTC date by subtracting Beijing offset
+    const utcMs = Date.UTC(year, month, day, hour, min, secs, millis) - TZ_OFFSET * 3600000;
+    const ts = Math.floor(utcMs / 1000);
+    const tsMs = utcMs;
+
+    const bjD = new Date(utcMs + TZ_OFFSET * 3600000);
+    const f = formatBJ(bjD);
+
+    return [
+      '输入时间           ' + s,
+      '',
+      '北京时间           ' + f.y + '-' + f.mo + '-' + f.day + ' ' + f.h + ':' + f.mi + ':' + f.s,
+      '北京时间(毫秒)     ' + f.y + '-' + f.mo + '-' + f.day + ' ' + f.h + ':' + f.mi + ':' + f.s + '.' + f.ms,
+      '星期               ' + '周' + f.week,
+      '',
+      'Unix 秒            ' + ts,
+      'Unix 毫秒          ' + tsMs,
+      '',
+      'ISO 8601 (UTC)     ' + new Date(utcMs).toISOString(),
+      'ISO 8601 (北京)    ' + f.y + '-' + f.mo + '-' + f.day + 'T' + f.h + ':' + f.mi + ':' + f.s + '+08:00',
+    ].join('\n');
+  }
+
+  function convert() {
+    const raw = input.value.trim();
+    if (!raw) { output.textContent = ''; errorEl.textContent = ''; return; }
+
+    // detect: pure digits = timestamp, otherwise = datetime
+    let result;
+    if (/^\d+$/.test(raw)) {
+      result = tsToResult(raw);
+    } else {
+      result = datetimeToResult(raw);
+    }
+
+    if (result) {
+      errorEl.textContent = '';
+      output.textContent = result;
+    } else {
+      output.textContent = '';
+      errorEl.textContent = '无法解析输入，请输入 Unix 时间戳（秒/毫秒）或日期时间（如 2024-01-01 12:00:00）';
+    }
+  }
+
+  input.addEventListener('input', convert);
+
+  nowBtn.addEventListener('click', () => {
+    const now = Date.now();
+    input.value = Math.floor(now / 1000);
+    convert();
+  });
+
+  copyBtn.addEventListener('click', () => {
+    const text = output.textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1500);
+    });
+  });
+
+  // initial: show current time
+  nowBtn.click();
+</script>
+</body>
+</html>

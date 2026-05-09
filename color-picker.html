@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>颜色选择器</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #f0f0f0;
+    letter-spacing: 0.02em;
+  }
+
+  .back-link { display: inline-block; color: #7a7a9a; text-decoration: none; font-size: 12px; margin-bottom: 4px; transition: color 0.15s; }
+  .back-link:hover { color: #e0e0e0; }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #888;
+  }
+
+  .picker-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  input[type="color"] {
+    -webkit-appearance: none;
+    width: 48px; height: 48px;
+    border: 2px solid #2a2a4a;
+    border-radius: 6px;
+    cursor: pointer;
+    background: none;
+    padding: 2px;
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
+  input[type="color"]::-moz-color-swatch { border: none; border-radius: 3px; }
+
+  .preview {
+    width: 100%; height: 80px;
+    border-radius: 6px;
+    border: 1px solid #2a2a4a;
+    transition: background 0.2s;
+  }
+
+  .value-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .value-card {
+    background: #16213e;
+    border: 1px solid #2a2a4a;
+    border-radius: 6px;
+    padding: 1rem 1rem 1rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .value-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #888;
+    margin-bottom: 4px;
+  }
+
+  .value-text {
+    font-size: 0.9rem;
+    color: #e0e0e0;
+    word-break: break-all;
+  }
+
+  .copy-btn {
+    background: #2a2a4a;
+    border: 1px solid #3a3a5a;
+    color: #ccc;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    margin-left: 0.75rem;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .copy-btn:hover { background: #3a3a5a; color: #fff; }
+  .copy-btn.copied { background: #2d5a27; border-color: #3a7a32; color: #8f8; }
+
+  .slider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .slider-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #888;
+    width: 24px;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    flex: 1; height: 4px;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    cursor: pointer;
+  }
+
+  .slider-val {
+    font-size: 0.75rem;
+    color: #aaa;
+    width: 32px;
+    text-align: right;
+  }
+
+  .hex-input {
+    background: #16213e;
+    border: 1px solid #2a2a4a;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.3rem 0.6rem;
+    width: 100px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .hex-input:focus { border-color: #4a6fa5; }
+</style>
+</head>
+<body>
+<div class="container">
+  <a class="back-link" href="index.html">← 返回首页</a>
+  <h1>颜色选择器</h1>
+
+  <div class="panel">
+    <label>拾色器</label>
+    <div class="picker-row">
+      <input type="color" id="picker" value="#3a6b5e">
+      <input type="text" class="hex-input" id="hexInput" value="#3A6B5E" maxlength="7">
+    </div>
+    <div class="preview" id="preview" style="background:#3a6b5e;"></div>
+  </div>
+
+  <div class="panel">
+    <label>色值</label>
+    <div class="value-cards">
+      <div class="value-card">
+        <div>
+          <div class="value-label">HEX</div>
+          <div class="value-text" id="hexVal">#3A6B5E</div>
+        </div>
+        <button class="copy-btn" data-target="hexVal">Copy</button>
+      </div>
+      <div class="value-card">
+        <div>
+          <div class="value-label">RGB</div>
+          <div class="value-text" id="rgbVal">rgb(58, 107, 94)</div>
+        </div>
+        <button class="copy-btn" data-target="rgbVal">Copy</button>
+      </div>
+      <div class="value-card">
+        <div>
+          <div class="value-label">HSL</div>
+          <div class="value-text" id="hslVal">hsl(164, 30%, 32%)</div>
+        </div>
+        <button class="copy-btn" data-target="hslVal">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <label>滑块调节</label>
+    <div class="slider-group">
+      <div class="slider-row">
+        <span class="slider-label">R</span>
+        <input type="range" id="sliderR" min="0" max="255" value="58">
+        <span class="slider-val" id="valR">58</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">G</span>
+        <input type="range" id="sliderG" min="0" max="255" value="107">
+        <span class="slider-val" id="valG">107</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">B</span>
+        <input type="range" id="sliderB" min="0" max="255" value="94">
+        <span class="slider-val" id="valB">94</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const picker   = document.getElementById('picker');
+  const hexInput = document.getElementById('hexInput');
+  const preview  = document.getElementById('preview');
+  const hexVal   = document.getElementById('hexVal');
+  const rgbVal   = document.getElementById('rgbVal');
+  const hslVal   = document.getElementById('hslVal');
+  const sliderR  = document.getElementById('sliderR');
+  const sliderG  = document.getElementById('sliderG');
+  const sliderB  = document.getElementById('sliderB');
+  const valR     = document.getElementById('valR');
+  const valG     = document.getElementById('valG');
+  const valB     = document.getElementById('valB');
+
+  function hexToRgb(hex) {
+    const c = hex.replace('#', '');
+    return {
+      r: parseInt(c.slice(0, 2), 16),
+      g: parseInt(c.slice(2, 4), 16),
+      b: parseInt(c.slice(4, 6), 16),
+    };
+  }
+
+  function rgbToHex(r, g, b) {
+    return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+  }
+
+  function rgbToHsl(r, g, b) {
+    const nr = r / 255, ng = g / 255, nb = b / 255;
+    const max = Math.max(nr, ng, nb), min = Math.min(nr, ng, nb);
+    const l = (max + min) / 2;
+    if (max === min) return { h: 0, s: 0, l: Math.round(l * 100) };
+    const d = max - min;
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    let h;
+    switch (max) {
+      case nr: h = ((ng - nb) / d + (ng < nb ? 6 : 0)) / 6; break;
+      case ng: h = ((nb - nr) / d + 2) / 6; break;
+      case nb: h = ((nr - ng) / d + 4) / 6; break;
+    }
+    return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+  }
+
+  function updateFromHex(hex) {
+    const upper = hex.toUpperCase();
+    const { r, g, b } = hexToRgb(upper);
+    const hsl = rgbToHsl(r, g, b);
+
+    preview.style.background = upper;
+    hexVal.textContent = upper;
+    rgbVal.textContent = 'rgb(' + r + ', ' + g + ', ' + b + ')';
+    hslVal.textContent = 'hsl(' + hsl.h + ', ' + hsl.s + '%, ' + hsl.l + '%)';
+
+    picker.value = upper;
+    hexInput.value = upper;
+
+    sliderR.value = r; valR.textContent = r;
+    sliderG.value = g; valG.textContent = g;
+    sliderB.value = b; valB.textContent = b;
+
+    // slider track color
+    sliderR.style.accentColor = 'rgb(' + r + ',0,0)';
+  }
+
+  function updateFromRgb(r, g, b) {
+    updateFromHex(rgbToHex(r, g, b));
+  }
+
+  picker.addEventListener('input', () => updateFromHex(picker.value));
+
+  hexInput.addEventListener('change', () => {
+    const v = hexInput.value.trim();
+    if (/^#?[0-9a-fA-F]{6}$/.test(v)) {
+      const hex = '#' + v.replace('#', '').toUpperCase();
+      updateFromHex(hex);
+    } else {
+      hexInput.value = picker.value;
+    }
+  });
+
+  sliderR.addEventListener('input', () => {
+    valR.textContent = sliderR.value;
+    updateFromRgb(+sliderR.value, +sliderG.value, +sliderB.value);
+  });
+  sliderG.addEventListener('input', () => {
+    valG.textContent = sliderG.value;
+    updateFromRgb(+sliderR.value, +sliderG.value, +sliderB.value);
+  });
+  sliderB.addEventListener('input', () => {
+    valB.textContent = sliderB.value;
+    updateFromRgb(+sliderR.value, +sliderG.value, +sliderB.value);
+  });
+
+  // copy buttons
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.target;
+      const text = document.getElementById(targetId).textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 1500);
+      });
+    });
+  });
+</script>
+</body>
+</html>
